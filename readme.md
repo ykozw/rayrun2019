@@ -19,3 +19,13 @@
 ## 未定事項
 - 評価方法。テスト時間の平均？MSEは評価に加える？
 - 使用可能なSIMD拡張命令セットは未定です。
+
+## 参考実装のビルド方法
+
+```
+mkdir rayrun
+cd rayrun
+git clone https://github.com/qatnonoil/rayrun2019.git
+git submodule update --init
+build.bat
+```
