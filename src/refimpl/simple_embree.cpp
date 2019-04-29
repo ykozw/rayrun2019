@@ -1,4 +1,4 @@
-//
+ï»¿//
 #include "embree3/rtcore.h"
 //
 #define WIN32_LEAN_AND_MEAN
@@ -218,8 +218,8 @@ void rayRun(
     size_t numVerts,
     const uint32_t* indices,
     size_t numFace,
-    Shot* shots,
-    size_t numShots)
+    Test* tests,
+    size_t numTests)
 {
     class Local
     {
@@ -229,10 +229,10 @@ void rayRun(
             printf("ERR:%s\n", str);
         }
     };
-    // TOOD: embree‚Ì‰Šú‰»‚ğ‚·‚é
+    // TOOD: embreeã®åˆæœŸåŒ–ã‚’ã™ã‚‹
     RTCDevice device = rtcNewDevice("");
     rtcSetDeviceErrorFunction(device, Local::error_handler, nullptr);
-    // ƒV[ƒ“‚Ìì¬
+    // ã‚·ãƒ¼ãƒ³ã®ä½œæˆ
     RTCScene scene = rtcNewScene(device);
     //
     RTCGeometry mesh = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -263,21 +263,21 @@ void rayRun(
     //
     XorShift128 rng(0x123);
     //
-    for (int32_t sn = 0; sn < numShots; ++sn)
+    for (int32_t tn = 0; tn < numTests; ++tn)
     {
-        const Shot& shot = shots[sn];
-        const int32_t width = shot.width;
-        const int32_t height = shot.height;
+        const Test& test = tests[tn];
+        const int32_t width = test.width;
+        const int32_t height = test.height;
         const int32_t hw = width / 2;
         const float iw = 1.0f / float(width);
         const int32_t hh = height / 2;
         const float ih = 1.0f / float(height);
-        const Vec3 dir = Vec3(shot.dir).normalized();
-        const Vec3 pos = Vec3(shot.pos);
-        const Vec3 right = Vec3::cross(dir, Vec3(shot.up)).normalized();
+        const Vec3 dir = Vec3(test.dir).normalized();
+        const Vec3 pos = Vec3(test.pos);
+        const Vec3 right = Vec3::cross(dir, Vec3(test.up)).normalized();
         const Vec3 up = Vec3::cross(right, dir).normalized();
-        const float hfovy = shot.fovy * 0.5f;
-        float* image = shot.image;
+        const float hfovy = test.fovy * 0.5f;
+        float* image = test.image;
         //
         for (int32_t y = 0; y < height; ++y)
         {
@@ -316,7 +316,7 @@ void rayRun(
                 const OrthonormalBasis onb(ng);
                 //
                 float ao = 0;
-                const int32_t numSample = 512;
+                const int32_t numSample = 128;
                 const float invNumSample = 1.0f / float(numSample);
                 for (int32_t sn=0;sn< numSample;++sn)
                 {
@@ -337,10 +337,7 @@ void rayRun(
                     ao += (rayHit.hit.geomID == -1) ? invNumSample * wiLocal.z() : 0.0f;
                 }
                 //
-                const int32_t pi = (x + y * width) * 3;
-                image[pi + 0] = ao;
-                image[pi + 1] = ao;
-                image[pi + 2] = ao;
+                image[x + y * width] = ao;
             }
         }
     }
