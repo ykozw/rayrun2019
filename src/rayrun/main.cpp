@@ -1,26 +1,27 @@
-/*
+ï»¿/*
 # TODOs
-- MSEŒvZ•”•ª‚ğì¬‚·‚é
-- ŠÔŒv‘ª•”•ª‚ğì¬‚·‚é
-- ƒ\[ƒXƒR[ƒh‚ğŒöŠJ‚·‚é
-- 
+- MSEè¨ˆç®—éƒ¨åˆ†ã‚’ä½œæˆã™ã‚‹
+- æ™‚é–“è¨ˆæ¸¬éƒ¨åˆ†ã‚’ä½œæˆã™ã‚‹
+- ã‚½ãƒ¼ã‚¹ã‚³ãƒ¼ãƒ‰ã‚’å…¬é–‹ã™ã‚‹
+- ã‚·ã‚§ãƒ¼ãƒ‡ã‚£ãƒ³ã‚°æ³•ç·šã«ã™ã‚‹
 
-# ƒ‹[ƒ‹
-- “ü—Í‚³‚ê‚½ƒƒbƒVƒ…ƒf[ƒ^‚ÆƒJƒƒ‰î•ñ‚©‚çAO‚Ì‰æ‘œ‚ğo—Í‚·‚é
-- w’èMSEˆÈ‰º‚Ìê‡‚Í¸Ši
-- GPU‹Ö~
-- Embree‚È‚Ç‚ÌŠO•”‚ÌŒğ·”»’èƒGƒ“ƒWƒ“‚Í‹Ö~
-- ‘S‚Ä‚Ì‰æ‘œ‚ª‡Ši‚µ‚½‚¤‚¦‚ÅAÅ‚à‘‚­I—¹‚µ‚½‚à‚Ì‚ª—DŸ
+# ãƒ«ãƒ¼ãƒ«
+- å…¥åŠ›ã•ã‚ŒãŸãƒ¡ãƒƒã‚·ãƒ¥ãƒ‡ãƒ¼ã‚¿ã¨ã‚«ãƒ¡ãƒ©æƒ…å ±ã‹ã‚‰AOã®ç”»åƒã‚’å‡ºåŠ›ã™ã‚‹
+- æŒ‡å®šMSEä»¥ä¸‹ã®å ´åˆã¯å¤±æ ¼
+- GPUç¦æ­¢
+- Embreeãªã©ã®å¤–éƒ¨ã®äº¤å·®åˆ¤å®šã‚¨ãƒ³ã‚¸ãƒ³ã¯ç¦æ­¢
+- å…¨ã¦ã®ç”»åƒãŒåˆæ ¼ã—ãŸã†ãˆã§ã€æœ€ã‚‚æ—©ãçµ‚äº†ã—ãŸã‚‚ã®ãŒå„ªå‹
 
-# Q‰ÁÒ‚ÉH•v‚µ‚Ä‚à‚ç‚¦‚»‚¤‚È‚±‚Æˆê——
-- •À—ñ‰»‚·‚é
-- cos‚ğÅ‰‚©‚ç‚©‚¯‚é
-- QMC‚·‚é
-- AO‚Ì•ªU‚©‚çû‘©‚ğ”»’è‚·‚é
-- shot”/image‚ÌƒTƒCƒY‚ª¬‚³‚¯‚ê‚Îconstruction‚ğ—}§‚·‚é
-- shot”/image‚ÌƒTƒCƒY‚ªˆÙí‚É‘å‚«‚¯‚ê‚ÎH•v‚ğ‚·‚é
-- ˆÙí‚É¢”‚ª‘å‚«‚¯‚ê‚ÎH•v‚ğ‚·‚é
-- raystream‚É‚·‚é
+# å‚åŠ è€…ã«å·¥å¤«ã—ã¦ã‚‚ã‚‰ãˆãã†ãªã“ã¨ä¸€è¦§
+- ä¸¦åˆ—åŒ–ã™ã‚‹
+- cosã‚’æœ€åˆã‹ã‚‰ã‹ã‘ã‚‹
+- QMCã™ã‚‹
+- ãƒ‡ãƒã‚¤ã‚ºã‚’ã‹ã‘ã‚‹
+- AOã®åˆ†æ•£ã‹ã‚‰åæŸã‚’åˆ¤å®šã™ã‚‹
+- shotæ•°/imageã®ã‚µã‚¤ã‚ºãŒå°ã•ã‘ã‚Œã°constructionã‚’æŠ‘åˆ¶ã™ã‚‹
+- shotæ•°/imageã®ã‚µã‚¤ã‚ºãŒç•°å¸¸ã«å¤§ãã‘ã‚Œã°å·¥å¤«ã‚’ã™ã‚‹
+- ç•°å¸¸ã«â–³æ•°ãŒå¤§ãã‘ã‚Œã°å·¥å¤«ã‚’ã™ã‚‹
+- raystreamã«ã™ã‚‹
 */
 
 //
@@ -77,46 +78,46 @@ static std::tuple<std::vector<float>, std::vector<uint32_t>> loadTriangle()
 //
 static void testMain(RayRunFun rayRun)
 {
-    // obj‚ğƒ[ƒh
+    // objã‚’ãƒ­ãƒ¼ãƒ‰
     auto[vertices, indices] = loadMesh("../asset/moriknob.obj");
-    // ‘‚«o‚µæƒCƒ[ƒW‚Ì€”õ
-    const int32_t width = 1024;
-    const int32_t height = 1024;
+    // æ›¸ãå‡ºã—å…ˆã‚¤ãƒ¡ãƒ¼ã‚¸ã®æº–å‚™
+    const int32_t width = 1280;
+    const int32_t height = 720;
     //
-    std::vector<Shot> shots;
-    Shot shot;
-    shot.pos[0] =   0.01f;
-    shot.pos[1] =   7.0f;
-    shot.pos[2] =   -7.0f;
-    shot.dir[0] =   0.0f;
-    shot.dir[1] =   -1.0f;
-    shot.dir[2] =   1.0f;
-    shot.up[0] = 0.0f;
-    shot.up[1] = 1.0f;
-    shot.up[2] = 0.0f;
-    shot.fovy = 3.141592f / 6.0f;
-    shot.width = width;
-    shot.height = height;
-    shot.image = (float*)malloc(shot.width*shot.height*sizeof(float)*3);
-    shots.push_back(shot);
+    std::vector<Test> tests;
+    Test test;
+    test.pos[0] =   0.01f;
+    test.pos[1] =   5.0f;
+    test.pos[2] =   -5.0f;
+    test.dir[0] =   0.0f;
+    test.dir[1] =   -1.0f;
+    test.dir[2] =   1.0f;
+    test.up[0] = 0.0f;
+    test.up[1] = 1.0f;
+    test.up[2] = 0.0f;
+    test.fovy = 3.141592f / 6.0f;
+    test.width = width;
+    test.height = height;
+    test.image = (float*)malloc(test.width*test.height*sizeof(float));
+    tests.push_back(test);
 
-    // ƒeƒXƒg‚ğŒÄ‚Ño‚·
-    rayRun(vertices.data(), vertices.size()/3, indices.data(), indices.size()/3, shots.data(), shots.size());
+    // ãƒ†ã‚¹ãƒˆã‚’å‘¼ã³å‡ºã™
+    rayRun(vertices.data(), vertices.size()/3, indices.data(), indices.size()/3, tests.data(), tests.size());
 
-    // ƒCƒ[ƒW‘‚«o‚µ
+    // ã‚¤ãƒ¡ãƒ¼ã‚¸æ›¸ãå‡ºã—
     std::vector<uint8_t> aos;
-    for (auto& shot : shots)
+    for (auto& test : tests)
     {
         aos.clear();
-        for (int32_t pi=0;pi<width*height*3;++pi)
+        for (int32_t pi=0;pi<width*height;++pi)
         {
-            const uint8_t ao = uint8_t(std::max(std::min(int32_t(shot.image[pi] * 254.0f + 0.5f),255),0));
+            const uint8_t ao = uint8_t(std::max(std::min(int32_t(test.image[pi] * 255.0f + 0.5f),255),0));
             aos.push_back(ao);
         }
         stbi_flip_vertically_on_write(true);
-        stbi_write_png("test.png", width, height, 3, aos.data(), sizeof(uint8_t)*width*3);
+        stbi_write_png("test.png", width, height, 1, aos.data(), sizeof(uint8_t)*width);
     }
-    // TODO: diff‚ğÀs‚·‚é
+    // TODO: diffã‚’å®Ÿè¡Œã™ã‚‹
 }
 
 //

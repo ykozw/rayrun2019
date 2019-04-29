@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 //
 #include <cstdint>
 //
-struct Shot
+struct Test
 {
     float pos[3];
     float dir[3];
@@ -18,13 +18,13 @@ typedef void(*RayRunFun)(
     size_t numVerts,
     uint32_t* indices,
     size_t numFace,
-    Shot* shots,
-    size_t numShots);
+    Test* tests,
+    size_t numTests);
 //
 extern "C" __declspec(dllexport) void rayRun(
     const float* vertices,
     size_t numVerts,
     const uint32_t* indices,
     size_t numFace,
-    Shot* shots,
-    size_t numShots);
+    Test* tests,
+    size_t numTests);
