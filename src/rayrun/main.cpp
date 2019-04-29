@@ -1,13 +1,4 @@
-﻿/*
-# TODOs
-- jsonで設定をロードするところ
-- MSE計算部分を作成する
-- 時間計測部分を作成する
-- ソースコードを公開する
-- シェーディング法線にする
-*/
-
-//
+﻿//
 #include "rayrun.hpp"
 //
 #define WIN32_LEAN_AND_MEAN
@@ -149,22 +140,15 @@ static void testMain(RayRunFun rayRun, const std::filesystem::path& jsonpath)
 
         // diff
         int32_t outputCount = 0;
-        std::vector<uint8_t> aos;
         for (auto& test : tests)
         {
-            aos.clear();
-            for (int32_t pi = 0; pi < test.width*test.height; ++pi)
-            {
-                const uint8_t ao = uint8_t(std::max(std::min(int32_t(test.image[pi] * 255.0f + 0.5f), 255), 0));
-                aos.push_back(ao);
-            }
             // diff
             std::filesystem::path imagename = objpath.replace_extension();
             imagename.replace_filename(std::filesystem::path(imagename.filename().string() + std::to_string(outputCount)));
-            imagename.replace_extension("png");
+            imagename.replace_extension("hdr");
             int32_t width, height, comp;
             stbi_set_flip_vertically_on_load(true);
-            uint8_t* img = stbi_load(imagename.string().c_str(), &width, &height, &comp, 1);
+            float* img = stbi_loadf(imagename.string().c_str(), &width, &height, &comp, 1);
             //
             if ((width != test.width) || (height != test.height))
             {
@@ -173,23 +157,22 @@ static void testMain(RayRunFun rayRun, const std::filesystem::path& jsonpath)
             }
             //
             const size_t numPixel = test.width*test.height;
-            size_t se = 0;
+            double se = 0;
             for (int32_t pi = 0; pi < numPixel; ++pi)
             {
-                const int32_t diff = img[pi] - aos[pi];
+                const float diff = img[pi] - test.image[pi];
                 se += diff * diff;
             }
-            const double mse = double(se) / double(numPixel);
-            printf("MSE:%f\n", mse);
+            const double rmse = std::sqrt(se / double(numPixel));
+            printf("RMSE:%f\n", rmse);
             
-#if 0
+#if 1
             // NOTE: デバッグ出力
-            stbi_flip_vertically_on_write(true);
-            
-            const std::string filename = std::string("output") + std::to_string(outputCount) + ".png";
-            stbi_write_png(filename.c_str(), test.width, test.height, 1, aos.data(), sizeof(uint8_t)*test.width);
-            ++outputCount;
+            stbi_flip_vertically_on_write(true);       
+            const std::string filename = std::string("output") + std::to_string(outputCount) + ".hdr";
+            stbi_write_hdr(filename.c_str(), test.width, test.height, 1, test.image);
 #endif
+            ++outputCount;
         }
         
     }
