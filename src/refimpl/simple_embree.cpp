@@ -316,7 +316,7 @@ void rayRun(
                 const OrthonormalBasis onb(ng);
                 //
                 float ao = 0;
-                const int32_t numSample = 32;
+                const int32_t numSample = 512;
                 const float invNumSample = 1.0f / float(numSample);
                 for (int32_t sn=0;sn< numSample;++sn)
                 {

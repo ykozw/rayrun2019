@@ -1,27 +1,10 @@
 ﻿/*
 # TODOs
+- jsonで設定をロードするところ
 - MSE計算部分を作成する
 - 時間計測部分を作成する
 - ソースコードを公開する
 - シェーディング法線にする
-
-# ルール
-- 入力されたメッシュデータとカメラ情報からAOの画像を出力する
-- 指定MSE以下の場合は失格
-- GPU禁止
-- Embreeなどの外部の交差判定エンジンは禁止
-- 全ての画像が合格したうえで、最も早く終了したものが優勝
-
-# 参加者に工夫してもらえそうなこと一覧
-- 並列化する
-- cosを最初からかける
-- QMCする
-- デノイズをかける
-- AOの分散から収束を判定する
-- shot数/imageのサイズが小さければconstructionを抑制する
-- shot数/imageのサイズが異常に大きければ工夫をする
-- 異常に△数が大きければ工夫をする
-- raystreamにする
 */
 
 //
@@ -31,6 +14,8 @@
 #define NOMINMAX
 #include <windows.h>
 //
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -40,6 +25,8 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <array>
+#include <filesystem>
 
 //
 static std::tuple<std::vector<float>, std::vector<uint32_t>> loadMesh(const std::string& filename)
@@ -62,70 +49,169 @@ static std::tuple<std::vector<float>, std::vector<uint32_t>> loadMesh(const std:
     return { attrib.vertices , indices };
 }
 
-static std::tuple<std::vector<float>, std::vector<uint32_t>> loadTriangle()
-{
-    std::vector<float> vs;
-    vs.push_back(+0.0f); vs.push_back(+1.0f); vs.push_back(+0.0f);
-    vs.push_back(-1.0f); vs.push_back(-1.0f); vs.push_back(+0.0f);
-    vs.push_back(+1.0f); vs.push_back(-1.0f); vs.push_back(+0.0f);
-    std::vector<uint32_t> is;
-    is.push_back(0);
-    is.push_back(1);
-    is.push_back(2);
-    return { vs, is };
-}
-
 //
-static void testMain(RayRunFun rayRun)
+//
+struct TestDesc
 {
-    // objをロード
-    auto[vertices, indices] = loadMesh("../asset/moriknob.obj");
-    // 書き出し先イメージの準備
-    const int32_t width = 1280;
-    const int32_t height = 720;
-    //
-    std::vector<Test> tests;
-    Test test;
-    test.pos[0] =   0.01f;
-    test.pos[1] =   5.0f;
-    test.pos[2] =   -5.0f;
-    test.dir[0] =   0.0f;
-    test.dir[1] =   -1.0f;
-    test.dir[2] =   1.0f;
-    test.up[0] = 0.0f;
-    test.up[1] = 1.0f;
-    test.up[2] = 0.0f;
-    test.fovy = 3.141592f / 6.0f;
-    test.width = width;
-    test.height = height;
-    test.image = (float*)malloc(test.width*test.height*sizeof(float));
-    tests.push_back(test);
-
-    // テストを呼び出す
-    rayRun(vertices.data(), vertices.size()/3, indices.data(), indices.size()/3, tests.data(), tests.size());
-
-    // イメージ書き出し
-    std::vector<uint8_t> aos;
-    for (auto& test : tests)
+public:
+    std::string model;
+    struct CamImage
     {
-        aos.clear();
-        for (int32_t pi=0;pi<width*height;++pi)
-        {
-            const uint8_t ao = uint8_t(std::max(std::min(int32_t(test.image[pi] * 255.0f + 0.5f),255),0));
-            aos.push_back(ao);
-        }
-        stbi_flip_vertically_on_write(true);
-        stbi_write_png("test.png", width, height, 1, aos.data(), sizeof(uint8_t)*width);
+        std::array<float, 3> pos;
+        std::array<float, 3> dir;
+        std::array<float, 3> up;
+        float fovy;
+        int32_t width;
+        int32_t height;
+    };
+    std::vector<CamImage> camImage;
+};
+//
+std::vector<TestDesc> getTestDescs(const std::string& filename)
+{
+    // JSONデータの読み込み。
+    std::ifstream file(filename, std::ios::in);
+    const std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    picojson::value v;
+    const std::string err = picojson::parse(v, json);
+    if (err != "")
+    {
+        printf("%s\n", err.c_str());
+        return {};
     }
-    // TODO: diffを実行する
+    //
+    std::vector<TestDesc> testDescs;
+    for (auto& test : v.get<picojson::array>())
+    {
+        TestDesc testDesc;
+        picojson::object& obj = test.get<picojson::object>();
+        testDesc.model = obj["model"].get<std::string>();
+        //
+        for (auto& cams : obj["tests"].get<picojson::array>())
+        {
+            picojson::object& obj2 = cams.get<picojson::object>();
+
+            const auto getV3 = [](picojson::value& obj)->std::array<float, 3>
+            {
+                picojson::array& posArr = obj.get<picojson::array>();
+                return {
+                    float(posArr[0].get<double>()),
+                    float(posArr[1].get<double>()),
+                    float(posArr[2].get<double>()) };
+            };
+            TestDesc::CamImage camImage;
+            camImage.pos = getV3(obj2["pos"]);
+            camImage.dir = getV3(obj2["dir"]);
+            camImage.up = getV3(obj2["up"]);
+            camImage.fovy = float(obj2["fovy"].get<double>());
+            camImage.width = int32_t(obj2["width"].get<double>());
+            camImage.height = int32_t(obj2["height"].get<double>());
+            testDesc.camImage.push_back(camImage);
+        }
+        testDescs.push_back(testDesc);
+    }
+    return testDescs;
 }
 
 //
-void main()
+static void testMain(RayRunFun rayRun, const std::filesystem::path& jsonpath)
 {
-    HMODULE dll = LoadLibrary("refimp.dll");
+    //
+    for (const TestDesc& td : getTestDescs(jsonpath.string()))
+    {
+        // objをロード
+        auto objpath = jsonpath.parent_path();
+        objpath.append(td.model);
+        auto[vertices, indices] = loadMesh(objpath.string());
+        //
+        std::vector<Test> tests;
+        for (auto& ci : td.camImage)
+        {
+            Test test;
+            test.pos[0] = ci.pos[0];
+            test.pos[1] = ci.pos[1];
+            test.pos[2] = ci.pos[2];
+            test.dir[0] = ci.dir[0];
+            test.dir[1] = ci.dir[1];
+            test.dir[2] = ci.dir[2];
+            test.up[0] = ci.up[0];
+            test.up[1] = ci.up[1];
+            test.up[2] = ci.up[2];
+            test.fovy = ci.fovy;
+            test.width = ci.width;
+            test.height = ci.height;
+            test.image = (float*)malloc(test.width*test.height * sizeof(float));
+            tests.push_back(test);
+        }
+        //
+        rayRun(vertices.data(), vertices.size() / 3, indices.data(), indices.size() / 3, tests.data(), tests.size());
+
+        // diff
+        int32_t outputCount = 0;
+        std::vector<uint8_t> aos;
+        for (auto& test : tests)
+        {
+            aos.clear();
+            for (int32_t pi = 0; pi < test.width*test.height; ++pi)
+            {
+                const uint8_t ao = uint8_t(std::max(std::min(int32_t(test.image[pi] * 255.0f + 0.5f), 255), 0));
+                aos.push_back(ao);
+            }
+            // diff
+            std::filesystem::path imagename = objpath.replace_extension();
+            imagename.replace_filename(std::filesystem::path(imagename.filename().string() + std::to_string(outputCount)));
+            imagename.replace_extension("png");
+            int32_t width, height, comp;
+            stbi_set_flip_vertically_on_load(true);
+            uint8_t* img = stbi_load(imagename.string().c_str(), &width, &height, &comp, 1);
+            //
+            if ((width != test.width) || (height != test.height))
+            {
+                printf("image size is wrong.");
+                continue;
+            }
+            //
+            const size_t numPixel = test.width*test.height;
+            size_t se = 0;
+            for (int32_t pi = 0; pi < numPixel; ++pi)
+            {
+                const int32_t diff = img[pi] - aos[pi];
+                se += diff * diff;
+            }
+            const double mse = double(se) / double(numPixel);
+            printf("MSE:%f\n", mse);
+            
+#if 0
+            // NOTE: デバッグ出力
+            stbi_flip_vertically_on_write(true);
+            
+            const std::string filename = std::string("output") + std::to_string(outputCount) + ".png";
+            stbi_write_png(filename.c_str(), test.width, test.height, 1, aos.data(), sizeof(uint8_t)*test.width);
+            ++outputCount;
+#endif
+        }
+        
+    }
+}
+
+//
+void main(int32_t argc, char** argv)
+{
+    if (argc != 3)
+    {
+        return;
+    }
+    const char* dllname = argv[1];
+    const char* jsonname = argv[2];
+    //
+    auto jsonpath = std::filesystem::current_path();
+    jsonpath.append(jsonname);
+    jsonpath = std::filesystem::canonical(jsonpath);
+
+    //
+    HMODULE dll = LoadLibrary(dllname);
     const RayRunFun rayRun = (RayRunFun)GetProcAddress(dll, "rayRun");
-    testMain(rayRun);
+    testMain(rayRun, jsonpath);
     FreeLibrary(dll);
 }
-
