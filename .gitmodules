@@ -1,0 +1,9 @@
+[submodule "thirdparty/picojson"]
+	path = thirdparty/picojson
+	url = https://github.com/kazuho/picojson.git
+[submodule "thirdparty/stb"]
+	path = thirdparty/stb
+	url = https://github.com/nothings/stb.git
+[submodule "thirdparty/tinyobjloader"]
+	path = thirdparty/tinyobjloader
+	url = https://github.com/syoyo/tinyobjloader.git

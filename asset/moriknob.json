@@ -1,0 +1,11 @@
+{
+  "model": "moriknob.obj",
+  "pos": [ 0.01, 4.01, -6.0 ],
+  "dir": [ 0.0, -4.0, 6.0 ],
+  "up": [ 0.0, 1.0, 0.0 ],
+  "fovy": 0.523598667,
+  "width": 256,
+  "height": 256,
+  "samplePerPixel": 16,
+  "sampleAo": 16
+}
