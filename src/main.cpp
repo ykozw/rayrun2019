@@ -364,7 +364,7 @@ void main(int32_t argc, char** argv)
 #pragma omp parallel for schedule(dynamic, 16) reduction(+:rayCount) 
     for (int32_t y = 0; y < height; ++y)
     {
-        std::mt19937 rng(std::hash<int32_t>{}(y));
+        std::mt19937 rng(uint32_t(std::hash<int32_t>{}(y)));
         //
         std::vector<Ray> rays(setting.sampleAo);
         std::vector<float> coss(setting.sampleAo);
@@ -466,7 +466,7 @@ void main(int32_t argc, char** argv)
 #endif
     //
     swIsect.print("isect");
-    const float mrays = double(rayCount) / double(swIsect.elapsed() * 1000);
+    const float mrays = float(double(rayCount) / double(swIsect.elapsed() * 1000.0));
     printf("%.2fMRays/sec\n", mrays);
     //
     FreeLibrary(dll);

@@ -7,7 +7,6 @@
 
 ## 実装に関して
 - preprocess()はシーンの構築を行います。
-- preprocess()は複数回呼び出され、前回の構築データは破棄してください。
 - intersect()はシーンに対する交差判定を行います。
 - intersect()はpreprocess()の後に呼び出されます。
 - intersect()は複数のスレッドから呼び出されます。
@@ -21,6 +20,9 @@
 - 1on1のトーナメント方式です。
 - レンダリングが先に終了したほうが勝ち抜きです。
 - レンダリングモデル、シチュエーションを対決毎にじゃんけんで勝った方が選びます。
+- レンダリングモデル、シチュエーションは当日までヒミツです。
+- レンダリングモデルはMcGuireのページ以外からも用意されます。
+- よくあるシチュエーションをはじめ、極端なシチュエーションも用意しています。
 
 ## 参考実装のビルド方法
 
@@ -31,6 +33,12 @@ git clone https://github.com/qatnonoil/rayrun2019.git
 git submodule update --init
 build.bat
 ```
+
+1. 出来たrayrun.slnを開きます。
+2. rayrunプロジェクトの実行引数に"refimp "../asset/hairball.json""と入力します。
+3. テスト実装(refimp.dll)が動きます。
+
+このテスト実装の中身を参考に各自の実装を作ってください。
 
 ## その他
 - テストデータは[McGuire Computer Graphics Archive](https://casual-effects.com/data/)よりダウンロードしてください。

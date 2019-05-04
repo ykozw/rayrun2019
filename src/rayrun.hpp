@@ -2,7 +2,7 @@
 //
 #include <cstdint>
 //　レイ
-struct Ray
+struct alignas(16) Ray
 {
 public:
     //
@@ -22,10 +22,10 @@ public:
     // 交差点のシェーディング法線
     float ns[3];
     // -----------------------------------
-    // 以下テストベット側で使用する変数軍
+    // 以下テストベット側で使用する変数
     float reserve[16];
 };
-static_assert(sizeof(Ray) == 128);
+static_assert(sizeof(Ray) == 144);
 
 // メッシュの生成
 extern "C" __declspec(dllexport) void preprocess(
