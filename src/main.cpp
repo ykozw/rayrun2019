@@ -302,7 +302,6 @@ private:
 //
 void main(int32_t argc, char** argv)
 {
-    size_t hoge = sizeof(Ray);
     if (argc != 3)
     {
         return;

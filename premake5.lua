@@ -3,6 +3,14 @@ solution "rayrun"
 	location "generated"
 	configurations { "Debug", "Release" }
 	platforms {"x64"}
+	--
+	configuration "Debug"
+		defines { "DEBUG" }
+		symbols "On"
+	--
+	configuration "Release"
+		defines { "NDEBUG", "NO_ASSERT" }
+		optimize "On"
 
 -- 
 project "rayrun"

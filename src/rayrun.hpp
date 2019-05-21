@@ -21,6 +21,8 @@ public:
     float isect[3];
     // 交差点のシェーディング法線
     float ns[3];
+    // 交差点のfaceid
+    int32_t faceid;
     // -----------------------------------
     // 以下テストベット側で使用する変数
     float reserve[16];

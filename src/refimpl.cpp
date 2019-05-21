@@ -165,6 +165,8 @@ public:
     float v;
     //
     Vec3 ns;
+    //
+    int32_t faceid;
 };
 
 //
@@ -362,6 +364,7 @@ public:
             tri.aabb.addPoint(Vec3(tri.v[0]));
             tri.aabb.addPoint(Vec3(tri.v[1]));
             tri.aabb.addPoint(Vec3(tri.v[2]));
+            tri.faceid = faceNo;
             triangles.push_back(tri);
         }
         //
@@ -389,6 +392,7 @@ public:
                 node.n[0] * (1.0f - u - v) +
                 node.n[1] * u +
                 node.n[2] * v;
+            ray.faceid = node.faceid;
         }
         return isHit;
     }
@@ -409,6 +413,8 @@ private:
         std::array<Vec3, 3> n;
         // AABB
         AABB aabb;
+        //
+        int32_t faceid;
     };
     struct Node
     {
@@ -421,6 +427,8 @@ private:
         std::array<Vec3, 3> v;
         // 葉であった場合の法線。枝の場合は無効な値。
         std::array<Vec3, 3> n;
+        //
+        int32_t faceid = 0;
     };
 
 private:
@@ -441,14 +449,16 @@ private:
         // 三角形が一つしかない場合は葉
         if (numTriangle == 1)
         {
-            auto& v = triangles[0].v;
-            auto& n = triangles[0].n;
+            auto& tri = triangles[0];
+            auto& v = tri.v;
+            auto& n = tri.n;
             curNode.v[0] = v[0];
             curNode.v[1] = v[1];
             curNode.v[2] = v[2];
             curNode.n[0] = n[0];
             curNode.n[1] = n[1];
             curNode.n[2] = n[2];
+            curNode.faceid = tri.faceid;
             return;
         }
         // 軸と分割位置を適当に決める
@@ -613,6 +623,7 @@ void intersect(
             ray.ns[0] = rayExt.ns.x();
             ray.ns[1] = rayExt.ns.y();
             ray.ns[2] = rayExt.ns.z();
+            ray.faceid = rayExt.faceid;
         }
     }
 }
