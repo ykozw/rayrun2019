@@ -6,6 +6,6 @@
   "fovy": 0.523598667,
   "width": 512,
   "height": 512,
-  "samplePerPixel": 16,
-  "sampleAo": 16
+  "samplePerPixel": 1,
+  "sampleAo": 1
 }

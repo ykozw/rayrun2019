@@ -437,6 +437,10 @@ private:
         int32_t numTriangle,
         int32_t depth)
     {
+        if (numTriangle == 0)
+        {
+            return;
+        }
         // このノードのAABBを求める
         auto& curNode = nodes_[nodeIndex];
         curNode.childlen[0] = -1;
