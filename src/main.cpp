@@ -125,6 +125,47 @@ static std::tuple<
     std::string err;
     std::vector<uint32_t> indices;
     tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), nullptr, true);
+
+    // 法線がない場合は生成する
+    if (attrib.normals.empty())
+    {
+        const auto& verts = attrib.vertices;
+        const int32_t numVerts = verts.size() / 3;
+        std::vector<glm::vec3> normals(numVerts, glm::vec3(0.0f, 0.0f, 0.0f));
+        for (auto& shape : shapes)
+        {
+            const auto& indices = shape.mesh.indices;
+            const int32_t numFace = indices.size() / 3;
+            for(int32_t fi=0;fi< numFace;++fi)
+            {
+                const int32_t vi0 = indices[fi * 3 + 0].vertex_index;
+                const int32_t vi1 = indices[fi * 3 + 1].vertex_index;
+                const int32_t vi2 = indices[fi * 3 + 2].vertex_index;
+                const glm::vec3 v0(verts[vi0 * 3 + 0], verts[vi0 * 3 + 1], verts[vi0 * 3 + 2]);
+                const glm::vec3 v1(verts[vi1 * 3 + 0], verts[vi1 * 3 + 1], verts[vi1 * 3 + 2]);
+                const glm::vec3 v2(verts[vi2 * 3 + 0], verts[vi2 * 3 + 1], verts[vi2 * 3 + 2]);
+                const glm::vec3 e01 = v1 - v0;
+                const glm::vec3 e02 = v2 - v0;
+                const glm::vec3 n = glm::cross(e01, e02);
+                normals[vi0] += n;
+                normals[vi1] += n;
+                normals[vi2] += n;
+            }
+            for (auto& index : shape.mesh.indices)
+            {
+                index.normal_index = index.vertex_index;
+            }
+        }
+        attrib.normals.resize(attrib.vertices.size());
+        for (int32_t ni = 0; ni < normals.size(); ++ni)
+        {
+            const glm::vec3 n = glm::normalize(normals[ni]);
+            attrib.normals[ni * 3 + 0] = n.x;
+            attrib.normals[ni * 3 + 1] = n.y;
+            attrib.normals[ni * 3 + 2] = n.z;
+        }
+    }
+
     //
     for (auto& shape : shapes)
     {
