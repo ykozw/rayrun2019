@@ -29,6 +29,10 @@ public:
 };
 static_assert(sizeof(Ray) == 144);
 
+// 呼び出し側でOpenMPを使わないように要請する場合はtrueを返す
+// 関数が存在しない場合はfalseを返したとします
+extern "C" __declspec(dllexport) bool neverUseOpenMP();
+
 // メッシュの生成
 extern "C" __declspec(dllexport) void preprocess(
     // 頂点座標配列

@@ -29,6 +29,12 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 }
 
 //
+bool neverUseOpenMP()
+{
+    return false;
+}
+
+//
 class Vec3
 {
 public:

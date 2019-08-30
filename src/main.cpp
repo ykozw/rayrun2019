@@ -22,6 +22,7 @@
 #include <concurrent_vector.h>
 #include <d3d11.h>
 #include <tchar.h>
+#include <omp.h>
 //
 #include <cmath>
 #include <vector>
@@ -35,6 +36,9 @@
 #include <vector>
 #include <thread>
 #include <array>
+
+//
+typedef bool(*neverUseOpenMPFun)();
 
 //
 typedef void(*PreprocessFun)(
@@ -125,6 +129,47 @@ static std::tuple<
     std::string err;
     std::vector<uint32_t> indices;
     tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), nullptr, true);
+
+    // 法線がない場合は生成する
+    if (attrib.normals.empty())
+    {
+        const auto& verts = attrib.vertices;
+        const int32_t numVerts = verts.size() / 3;
+        std::vector<glm::vec3> normals(numVerts, glm::vec3(0.0f, 0.0f, 0.0f));
+        for (auto& shape : shapes)
+        {
+            const auto& indices = shape.mesh.indices;
+            const int32_t numFace = indices.size() / 3;
+            for(int32_t fi=0;fi< numFace;++fi)
+            {
+                const int32_t vi0 = indices[fi * 3 + 0].vertex_index;
+                const int32_t vi1 = indices[fi * 3 + 1].vertex_index;
+                const int32_t vi2 = indices[fi * 3 + 2].vertex_index;
+                const glm::vec3 v0(verts[vi0 * 3 + 0], verts[vi0 * 3 + 1], verts[vi0 * 3 + 2]);
+                const glm::vec3 v1(verts[vi1 * 3 + 0], verts[vi1 * 3 + 1], verts[vi1 * 3 + 2]);
+                const glm::vec3 v2(verts[vi2 * 3 + 0], verts[vi2 * 3 + 1], verts[vi2 * 3 + 2]);
+                const glm::vec3 e01 = v1 - v0;
+                const glm::vec3 e02 = v2 - v0;
+                const glm::vec3 n = glm::cross(e01, e02);
+                normals[vi0] += n;
+                normals[vi1] += n;
+                normals[vi2] += n;
+            }
+            for (auto& index : shape.mesh.indices)
+            {
+                index.normal_index = index.vertex_index;
+            }
+        }
+        attrib.normals.resize(attrib.vertices.size());
+        for (int32_t ni = 0; ni < normals.size(); ++ni)
+        {
+            const glm::vec3 n = glm::normalize(normals[ni]);
+            attrib.normals[ni * 3 + 0] = n.x;
+            attrib.normals[ni * 3 + 1] = n.y;
+            attrib.normals[ni * 3 + 2] = n.z;
+        }
+    }
+
     //
     for (auto& shape : shapes)
     {
@@ -146,8 +191,6 @@ public:
     glm::vec3 dir;
     glm::vec3 up;
     float fovy;
-    int32_t width;
-    int32_t height;
     int32_t samplePerPixel;
     int32_t sampleAo;
 
@@ -182,8 +225,6 @@ public:
         SceneSetting.dir = getV3(obj["dir"]);
         SceneSetting.up = getV3(obj["up"]);
         SceneSetting.fovy = float(obj["fovy"].get<double>());
-        SceneSetting.width = int32_t(obj["width"].get<double>());
-        SceneSetting.height = int32_t(obj["height"].get<double>());
         SceneSetting.samplePerPixel = int32_t(obj["samplePerPixel"].get<double>());
         SceneSetting.sampleAo = int32_t(obj["sampleAo"].get<double>());
     }
@@ -205,6 +246,10 @@ public:
     double elapsed()
     {
         return (double)std::chrono::duration_cast<std::chrono::milliseconds>(end_ - start_).count();
+    }
+    double elapsedNow()
+    {
+        return (double)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_).count();
     }
     void print(const char* tag)
     {
@@ -238,8 +283,14 @@ void renderingMain(
     std::filesystem::path jsonpath = jsonName;
     //
     HMODULE dll = LoadLibrary(dllName.c_str());
+    const neverUseOpenMPFun neverUseOpenMP = (neverUseOpenMPFun)GetProcAddress(dll, "neverUseOpenMP");
     const PreprocessFun preprocess = (PreprocessFun)GetProcAddress(dll, "preprocess");
     const IsectFun intersect = (IsectFun)GetProcAddress(dll, "intersect");
+    const bool useOpenMP = (neverUseOpenMP != nullptr) ? !neverUseOpenMP() : true;
+    if (!useOpenMP)
+    {
+        omp_set_num_threads(1);
+    }
     //
     SceneSetting setting;
     setting.load(jsonpath.string());
@@ -281,6 +332,7 @@ void renderingMain(
     Stopwatch swIsect;
     swIsect.start();
     std::atomic<int32_t> doneLine = 0;
+    bool timeout = false;
 #pragma omp parallel for schedule(dynamic, 16)
     for (int32_t y = 0; y < height; ++y)
     {
@@ -289,6 +341,14 @@ void renderingMain(
         //
         std::vector<Ray> rays(setting.sampleAo);
         std::vector<float> coss(setting.sampleAo);
+
+        // 60秒でタイムアウト
+        if (swIsect.elapsedNow() > 60000)
+        {
+            timeout = true;
+            break;
+        }
+
         //
         for (int32_t x = 0; x < width; ++x)
         {
@@ -298,7 +358,7 @@ void renderingMain(
                 //
                 const float px = float(x - hw) + dist01(rng);
                 const float py = float(y - hh) + dist01(rng);
-                const float xs = px * iw * std::tanf(hfovy*float(width) / float(height));
+                const float xs = px * iw * std::tanf(hfovy * float(width) / float(height));
                 const float ys = py * ih * std::tanf(hfovy);
                 const glm::vec3 rd = glm::normalize(glm::vec3(ys) * up + glm::vec3(xs) * right + dir);
                 Ray primRay;
@@ -382,10 +442,17 @@ void renderingMain(
     //
     FreeLibrary(dll);
     //
-    renderingState =
-        "TIME:" + std::_Floating_to_string("%.3f", (swPreprocess.elapsed() + swIsect.elapsed()) / 1000.0f) + "sec (" +
-        "BVH:" + std::_Floating_to_string("%.3f", swPreprocess.elapsed() / 1000.0f) +
-        " RT: " + std::_Floating_to_string("%.3f", swIsect.elapsed() / 1000.0f) + ")";
+    if (timeout)
+    {
+        renderingState = "TIMEOUT...";
+    }
+    else
+    {
+        renderingState =
+            "TIME:" + std::_Floating_to_string("%.3f", (swPreprocess.elapsed() + swIsect.elapsed()) / 1000.0f) + "sec (" +
+            "BVH:" + std::_Floating_to_string("%.3f", swPreprocess.elapsed() / 1000.0f) +
+            " RT: " + std::_Floating_to_string("%.3f", swIsect.elapsed() / 1000.0f) + ")";
+    }
 }
 //
 static ID3D11Device* g_pd3dDevice = nullptr;
