@@ -22,6 +22,7 @@
 #include <concurrent_vector.h>
 #include <d3d11.h>
 #include <tchar.h>
+#include <omp.h>
 //
 #include <cmath>
 #include <vector>
@@ -35,6 +36,9 @@
 #include <vector>
 #include <thread>
 #include <array>
+
+//
+typedef bool(*neverUseOpenMPFun)();
 
 //
 typedef void(*PreprocessFun)(
@@ -187,8 +191,6 @@ public:
     glm::vec3 dir;
     glm::vec3 up;
     float fovy;
-    int32_t width;
-    int32_t height;
     int32_t samplePerPixel;
     int32_t sampleAo;
 
@@ -223,8 +225,6 @@ public:
         SceneSetting.dir = getV3(obj["dir"]);
         SceneSetting.up = getV3(obj["up"]);
         SceneSetting.fovy = float(obj["fovy"].get<double>());
-        SceneSetting.width = int32_t(obj["width"].get<double>());
-        SceneSetting.height = int32_t(obj["height"].get<double>());
         SceneSetting.samplePerPixel = int32_t(obj["samplePerPixel"].get<double>());
         SceneSetting.sampleAo = int32_t(obj["sampleAo"].get<double>());
     }
@@ -279,8 +279,14 @@ void renderingMain(
     std::filesystem::path jsonpath = jsonName;
     //
     HMODULE dll = LoadLibrary(dllName.c_str());
+    const neverUseOpenMPFun neverUseOpenMP = (neverUseOpenMPFun)GetProcAddress(dll, "neverUseOpenMP");
     const PreprocessFun preprocess = (PreprocessFun)GetProcAddress(dll, "preprocess");
     const IsectFun intersect = (IsectFun)GetProcAddress(dll, "intersect");
+    const bool useOpenMP = (neverUseOpenMP != nullptr) ? !neverUseOpenMP() : true;
+    if (!useOpenMP)
+    {
+        omp_set_num_threads(1);
+    }
     //
     SceneSetting setting;
     setting.load(jsonpath.string());
@@ -339,7 +345,7 @@ void renderingMain(
                 //
                 const float px = float(x - hw) + dist01(rng);
                 const float py = float(y - hh) + dist01(rng);
-                const float xs = px * iw * std::tanf(hfovy*float(width) / float(height));
+                const float xs = px * iw * std::tanf(hfovy * float(width) / float(height));
                 const float ys = py * ih * std::tanf(hfovy);
                 const glm::vec3 rd = glm::normalize(glm::vec3(ys) * up + glm::vec3(xs) * right + dir);
                 Ray primRay;
