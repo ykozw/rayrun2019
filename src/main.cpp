@@ -247,6 +247,10 @@ public:
     {
         return (double)std::chrono::duration_cast<std::chrono::milliseconds>(end_ - start_).count();
     }
+    double elapsedNow()
+    {
+        return (double)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_).count();
+    }
     void print(const char* tag)
     {
         printf("%s %4.1fms\n", tag, elapsed());
@@ -328,6 +332,7 @@ void renderingMain(
     Stopwatch swIsect;
     swIsect.start();
     std::atomic<int32_t> doneLine = 0;
+    bool timeout = false;
 #pragma omp parallel for schedule(dynamic, 16)
     for (int32_t y = 0; y < height; ++y)
     {
@@ -336,6 +341,14 @@ void renderingMain(
         //
         std::vector<Ray> rays(setting.sampleAo);
         std::vector<float> coss(setting.sampleAo);
+
+        // 60秒でタイムアウト
+        if (swIsect.elapsedNow() > 60000)
+        {
+            timeout = true;
+            break;
+        }
+
         //
         for (int32_t x = 0; x < width; ++x)
         {
@@ -429,10 +442,17 @@ void renderingMain(
     //
     FreeLibrary(dll);
     //
-    renderingState =
-        "TIME:" + std::_Floating_to_string("%.3f", (swPreprocess.elapsed() + swIsect.elapsed()) / 1000.0f) + "sec (" +
-        "BVH:" + std::_Floating_to_string("%.3f", swPreprocess.elapsed() / 1000.0f) +
-        " RT: " + std::_Floating_to_string("%.3f", swIsect.elapsed() / 1000.0f) + ")";
+    if (timeout)
+    {
+        renderingState = "TIMEOUT...";
+    }
+    else
+    {
+        renderingState =
+            "TIME:" + std::_Floating_to_string("%.3f", (swPreprocess.elapsed() + swIsect.elapsed()) / 1000.0f) + "sec (" +
+            "BVH:" + std::_Floating_to_string("%.3f", swPreprocess.elapsed() / 1000.0f) +
+            " RT: " + std::_Floating_to_string("%.3f", swIsect.elapsed() / 1000.0f) + ")";
+    }
 }
 //
 static ID3D11Device* g_pd3dDevice = nullptr;
