@@ -222,7 +222,7 @@ public:
         picojson::object& obj = root.get<picojson::object>();
         SceneSetting.model = obj["model"].get<std::string>();
         SceneSetting.pos = getV3(obj["pos"]);
-        SceneSetting.dir = getV3(obj["dir"]);
+        SceneSetting.dir = glm::normalize(getV3(obj["dir"]));
         SceneSetting.up = getV3(obj["up"]);
         SceneSetting.fovy = float(obj["fovy"].get<double>());
         SceneSetting.samplePerPixel = int32_t(obj["samplePerPixel"].get<double>());
@@ -810,8 +810,6 @@ void main(int32_t argc, char** argv)
                             renderingPercent,
                             renderingState);
                         //
-                        dllPath = "";
-                        jsonPath = "";
                     });
             }
             ImGui::SameLine();
